@@ -1685,6 +1685,10 @@ loop:   for(int x=0, offset=0; x<nCodePoints; x++, offset+=len) {
             root = hasSupplementary ? new StartS(matchRoot) : new Start(matchRoot);
         }
 
+        System.err.println("BEGIN: Dumping object tree: " + pattern);
+        printObjectTree(root, 0);
+        System.err.println();
+
         // Release temporary storage
         temp = null;
         buffer = null;
@@ -1699,39 +1703,55 @@ loop:   for(int x=0, offset=0; x<nCodePoints; x++, offset+=len) {
         return namedGroups;
     }
 
+    private static void log(Object obj, int n) {
+        for (int i = 0; i < n; ++i)
+            System.err.print("  ");
+        System.err.println(obj);
+    }
+
+    private static void logTreeInfo(TreeInfo info) {
+        log("[TreeInfo] min: " + info.minLength +
+            ", max: " + info.maxLength +
+            ", maxValid: " + info.maxValid +
+            ", deterministic: " + info.deterministic, 0);
+    }
+
     /**
      * Used to print out a subtree of the Pattern to help with debugging.
      */
-    private static void printObjectTree(Node node) {
+    private static void printObjectTree(Node node, int n) {
         while(node != null) {
+            log(node, n);
+
             if (node instanceof Prolog) {
-                System.out.println(node);
-                printObjectTree(((Prolog)node).loop);
-                System.out.println("**** end contents prolog loop");
+                printObjectTree(((Prolog)node).loop, n + 1);
+                log("**** end contents prolog loop", n);
             } else if (node instanceof Loop) {
-                System.out.println(node);
-                printObjectTree(((Loop)node).body);
-                System.out.println("**** end contents Loop body");
+                printObjectTree(((Loop)node).body, n + 1);
+                log("**** end contents Loop body", n);
             } else if (node instanceof Curly) {
-                System.out.println(node);
-                printObjectTree(((Curly)node).atom);
-                System.out.println("**** end contents Curly body");
+                printObjectTree(((Curly)node).atom, n + 1);
+                log("**** end contents Curly body", n);
             } else if (node instanceof GroupCurly) {
-                System.out.println(node);
-                printObjectTree(((GroupCurly)node).atom);
-                System.out.println("**** end contents GroupCurly body");
+                printObjectTree(((GroupCurly)node).atom, n + 1);
+                log("**** end contents GroupCurly body", n);
+            } else if (node instanceof Branch) {
+                Node[] atoms = ((Branch)node).atoms;
+                for (int i = 0; i < atoms.length && atoms[i] != null; ++i) {
+                    log("Branch atom " + i, n);
+                    printObjectTree(atoms[i], n + 1);
+                }
             } else if (node instanceof GroupTail) {
-                System.out.println(node);
-                System.out.println("Tail next is "+node.next);
+                log("Tail next is "+node.next, n);
                 return;
-            } else {
-                System.out.println(node);
             }
+
             node = node.next;
+
             if (node != null)
-                System.out.println("->next:");
+                log("->next:", n);
             if (node == Pattern.accept) {
-                System.out.println("Accept Node");
+                log("Accept Node", n);
                 node = null;
             }
        }
@@ -2808,6 +2828,7 @@ loop:   for(int x=0, offset=0; x<nCodePoints; x++, offset+=len) {
                 tail.next = lookbehindEnd;
                 TreeInfo info = new TreeInfo();
                 head.study(info);
+                logTreeInfo(info);
                 if (info.maxValid == false) {
                     throw error("Look-behind group does not have "
                                 + "an obvious maximum length");
@@ -2892,6 +2913,7 @@ loop:   for(int x=0, offset=0; x<nCodePoints; x++, offset+=len) {
             // Discover if the group is deterministic
             TreeInfo info = new TreeInfo();
             if (head.study(info)) { // Deterministic
+                logTreeInfo(info);
                 GroupTail temp = (GroupTail) tail;
                 head = root = new GroupCurly(head.next, curly.cmin,
                                    curly.cmax, curly.type,
@@ -2900,6 +2922,7 @@ loop:   for(int x=0, offset=0; x<nCodePoints; x++, offset+=len) {
                                              capturingGroup);
                 return head;
             } else { // Non-deterministic
+                logTreeInfo(info);
                 int temp = ((GroupHead) head).localIndex;
                 Loop loop;
                 if (curly.type == GREEDY)
@@ -3396,6 +3419,7 @@ loop:   for(int x=0, offset=0; x<nCodePoints; x++, offset+=len) {
             this.next = node;
             TreeInfo info = new TreeInfo();
             next.study(info);
+            logTreeInfo(info);
             minLength = info.minLength;
         }
         boolean match(Matcher matcher, int i, CharSequence seq) {
