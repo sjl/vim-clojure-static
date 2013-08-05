@@ -1724,22 +1724,18 @@ loop:   for(int x=0, offset=0; x<nCodePoints; x++, offset+=len) {
             log(node, n);
 
             if (node instanceof Prolog) {
-                printObjectTree(((Prolog)node).loop, n + 1);
-                log("**** end contents prolog loop", n);
+                printObjectTree(((Prolog)node).loop, n + 2);
             } else if (node instanceof Loop) {
-                printObjectTree(((Loop)node).body, n + 1);
-                log("**** end contents Loop body", n);
+                printObjectTree(((Loop)node).body, n + 2);
             } else if (node instanceof Curly) {
-                printObjectTree(((Curly)node).atom, n + 1);
-                log("**** end contents Curly body", n);
+                printObjectTree(((Curly)node).atom, n + 2);
             } else if (node instanceof GroupCurly) {
-                printObjectTree(((GroupCurly)node).atom, n + 1);
-                log("**** end contents GroupCurly body", n);
+                printObjectTree(((GroupCurly)node).atom, n + 2);
             } else if (node instanceof Branch) {
                 Node[] atoms = ((Branch)node).atoms;
                 for (int i = 0; i < atoms.length && atoms[i] != null; ++i) {
-                    log("Branch atom " + i, n);
-                    printObjectTree(atoms[i], n + 1);
+                    log("Branch " + i, n + 1);
+                    printObjectTree(atoms[i], n + 2);
                 }
             } else if (node instanceof GroupTail) {
                 log("Tail next is "+node.next, n);
@@ -1748,8 +1744,6 @@ loop:   for(int x=0, offset=0; x<nCodePoints; x++, offset+=len) {
 
             node = node.next;
 
-            if (node != null)
-                log("->next:", n);
             if (node == Pattern.accept) {
                 log("Accept Node", n);
                 node = null;
